@@ -1,0 +1,44 @@
+#!/bin/zsh
+# Run net2 when this Mac joins Sharif-WiFi. Meant to be started by launchd
+# every few seconds: it only talks to the portal on a join, or again after a
+# failed attempt.
+set -u
+
+target="Sharif-WiFi"
+iface="en0"
+net2="/Users/p4/.local/bin/net2"
+root="${0:A:h}"
+state_dir="${HOME}/.local/state"
+state="${state_dir}/net2-wifi-ssid"
+retry_at="${state_dir}/net2-wifi-retry-at"
+log="${root}/net2.log"
+
+mkdir -p "$state_dir" "${log:h}"
+
+ssid=$(ipconfig getsummary "$iface" 2>/dev/null | awk -F': ' '/^[[:space:]]*SSID : / && $0 !~ /BSSID/ { print $2; exit }')
+last=""
+[[ -f "$state" ]] && last="$(<"$state")"
+
+now=$(date +%s)
+wait_until=0
+[[ -f "$retry_at" ]] && wait_until="$(<"$retry_at")"
+
+if [[ "$ssid" == "$target" ]]; then
+  due=0
+  [[ "$last" != "$target" ]] && due=1
+  [[ "$wait_until" -gt 0 && "$now" -ge "$wait_until" ]] && due=1
+  if [[ "$due" -eq 1 ]]; then
+    print -r -- "$(date '+%F %T') joined ${target}, running net2" >> "$log"
+    if "$net2" >> "$log" 2>&1; then
+      print -r -- "$(date '+%F %T') connected" >> "$log"
+      rm -f "$retry_at"
+    else
+      print -r -- "$(date '+%F %T') net2 failed, retrying in 60s" >> "$log"
+      print -r -- $((now + 60)) > "$retry_at"
+    fi
+  fi
+else
+  rm -f "$retry_at"
+fi
+
+print -r -- "$ssid" > "$state"

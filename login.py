@@ -2,9 +2,9 @@
 """Sign in to the Sharif network portal and connect this device.
 
 Usage:
-  ./login.py              connect (default)
-  ./login.py status       show whether this device is online
-  ./login.py disconnect   end the network session
+  net2                 connect (default)
+  net2 status          show whether this device is online
+  net2 disconnect      end the network session
 
 Credentials live in credentials.env (mode 600). On first run, if that file
 is missing, they are copied out of net.sharif.ir.har when it is present.
@@ -323,7 +323,7 @@ def online_sessions(
 ) -> dict:
     status, final_url, body = request(client, jar, SESSIONS, referer=HOME, ajax=True)
     if status >= 400 or not body.strip() or body.lstrip().startswith("<") or "login" in final_url:
-        raise PortalError("Session expired. Run ./login.py again.")
+        raise PortalError("Session expired. Run net2 again.")
     try:
         return json.loads(body)
     except json.JSONDecodeError as error:

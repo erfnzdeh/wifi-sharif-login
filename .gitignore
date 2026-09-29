@@ -1,3 +1,4 @@
 credentials.env
 cookies.txt
 *.har
+net2.log
